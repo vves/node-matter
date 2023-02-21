@@ -62,10 +62,10 @@ Network.get = singleton(() => new NetworkNode());
 const logger = Logger.get("Device");
 
 class Device {
-    async start(networkInterface : string|undefined = undefined) {
+    async start(networkInterface? : string) {
         logger.info(`node-matter@${packageJson.version}`);
 
-        const deviceName = `Matter test device`;
+        const deviceName = "Matter test device";
         const deviceType = 257 /* Dimmable bulb */;
         const vendorName = "node-matter";
         const passcode = 20202021;
