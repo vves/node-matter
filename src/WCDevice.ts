@@ -44,7 +44,7 @@ import { AdminCommissioningHandler } from "./matter/cluster/server/AdminCommissi
 import { NetworkCommissioningHandler } from "./matter/cluster/server/NetworkCommissioningServer";
 import { FabricIndex } from "./matter/common/FabricIndex";
 import { Platform } from "./util/Platform";
-import { WindowCoveringCluster, WindowCoveringEndProductType, WindowCoveringType } from "./matter/cluster/WindowCoveringCluster";
+import { WindowCoveringCluster, WindowCoveringEndProductType, WindowCoveringOperationalStatus, WindowCoveringType } from "./matter/cluster/WindowCoveringCluster";
 import { ClusterServerHandlers } from "./matter/cluster/server/ClusterServer";
 
 // From Chip-Test-DAC-FFF1-8000-0007-Key.der
@@ -88,20 +88,30 @@ class Device {
         // // We listen to the attribute update to trigger an action. This could also have been done in the method invokations in the server.
         // onOffClusterServer.attributes.onOff.addListener(on => commandExecutor(on ? "on" : "off")?.());
 
+        // wcClusterServer.attributes.
+
+        // TODO Status Codes?  Core Spec 8.10
+      const SuccessResponse =  {status: 0, interactionModelRevision:1}
+
       const WCClusterHandler: () => ClusterServerHandlers<typeof WindowCoveringCluster> = () => ({
-        open: async ({ }) => {
-          logger.warn('Open WC TODO');
-          return true
+        open: async ({attributes}) => {
+          logger.warn(`Open WC TODO ${attributes}`);
+          return SuccessResponse
         },
 
-        close: async ({ }) => {
-          logger.warn('Close WC TODO')
-          return true
+        close: async ({attributes }) => {
+          logger.warn(`Close WC TODO ${attributes}`)
+          return SuccessResponse
         },
 
-        stop: async ({ }) => {
-          logger.warn('Stop WC TODO')
-          return true
+        stop:  async ({ attributes}) => {
+          logger.warn(`Stop WC TODO ${attributes}`)
+          return SuccessResponse
+        },
+
+        gotoLiftPercent: async ({ request, attributes, session }) => {
+          logger.warn(`GotoLiftPercent: \n\trequest:${JSON.stringify(request)} \ntattribs: ${JSON.stringify(attributes)}`)
+          return SuccessResponse
         }
       });
 
@@ -115,28 +125,28 @@ class Device {
         },
           /* attributeInitialValues*/ {
           type: WindowCoveringType.RollerShade,
+          endProductType: WindowCoveringEndProductType.BalloonShade,
+          currentPositionLiftPercent: 88,
+          currentPositionLiftPercent100ths:8800,
           configStatus: {
             operational: true,
             reversed: false,
             liftPositionAware: true,
-            liftPositionType: true,  // encoder, not time
+            liftPositionType: true,   // encoder, not time
             tiltPositionAware: false,
-            tiltPositionType: true
-          }, // encoder, not time
-          endProductType: WindowCoveringEndProductType.CellularShade,
+            tiltPositionType: true    // encoder, not time
+          },
           mode: {
             calibrateMode: false,
             ledFeedback: false,
             maintenanceMode: false,
             reversed: false
           },
-          operationalStatus: {
-          }
+          operationalStatus: WindowCoveringOperationalStatus.Stopped
         },
         /* handlers */
         WCClusterHandler()
       )
-
 
         const secureChannelProtocol = new SecureChannelProtocol(
             await PaseServer.fromPin(passcode, { iterations: 1000, salt: Crypto.getRandomData(32) }),
