@@ -1,5 +1,6 @@
 import { BitFlag, TlvBitmap, TlvBoolean, TlvEnum, TlvField, TlvInt16, TlvObject, TlvUInt16, TlvUInt8, TlvWrapper } from "@project-chip/matter.js";
-import { Attribute, Cluster, Command, OptionalAttribute, OptionalCommand, TlvNoArguments, TlvNoResponse } from "./Cluster";
+import { TlvStatusResponse } from "../interaction/InteractionMessages";
+import { Attribute, Cluster, Command, OptionalAttribute, OptionalCommand, TlvNoArguments, TlvNoResponse, WritableAttribute } from "./Cluster";
 
 /** alias for percentages expressed as 0 to 100 */
 const WCPercent = TlvUInt16.bound({min: 0, max: 100})
@@ -14,13 +15,18 @@ const WindowCoveringFeatures = {
   lift: BitFlag(0),
   /** The Tilt feature applies to window coverings with vertical or horizontal strips. */
   tilt: BitFlag(1),
-  /** Relative positioning with percent100ths (min step 0.01%) attribute is mandatory,
+  /**
+   * Relative positioning with percent100ths (min step 0.01%) attribute is mandatory,
     E.g Max 10000 equals 100.00% and relative positioning with percent (min step 1%) attribute is for backward com­ patibility.
     The CurrentPosition attributes SHALL always reflects the physical position of an actuator and the
     TargetPosition attribute SHALL reflect the requested position of an actuator once a positioning command is received.
   */
   positionAwareLift: BitFlag(2),
+  /**
+   * The percentage attributes SHALL indicate the position as a percentage between the InstalledOpen­ Limits and InstalledClosedLimits attributes of the window covering starting at the open (0.00%).
+   * As a general rule, absolute positioning (in centimeters or tenth of a degrees) SHOULD NOT be sup­ported for new implementations. */
   absolutePosition: BitFlag(3),
+  /** Position Aware tilt control is supported. */
   positionAwareTilt: BitFlag(4)
 }
 
@@ -117,7 +123,10 @@ export const WindowCoveringConfigStatus = {
 }
 
 /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.5.15 */
-export const WindowCoveringOperationalStatus = {
+export enum WindowCoveringOperationalStatus {
+ Stopped = 0,
+ Opening = 1,
+ Closing = 2
   // TODO - not a simple BitFlag
 }
 
@@ -166,7 +175,7 @@ const GoToLiftValueParams = TlvObject({
 
 /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.6.5 */
 const GotoLiftPercentParams = TlvObject({
-  percent: TlvField(0, WCPercent),
+  percent: TlvField(0, WCPercent100ths),
   percent100ths: TlvField(1, WCPercent100ths)
 });
 
@@ -187,17 +196,20 @@ const GotoTiltPercentParams = GotoLiftPercentParams
 */
 const SceneTableExtensions = { /* TODO */}  // TODO
 
-
+/** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3 */
 export const WindowCoveringCluster = Cluster({
   id: 0x102,
   name: "Window Covering",
-  revision: 4,
+
+  /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.1 */
+  revision: 5,
+
   /** At least ONE of the Lift and Tilt features SHALL be supported */
   features: WindowCoveringFeatures,
 
   /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.5 */
   attributes: {
-    type:                             Attribute(0x0000, TlvEnum<WindowCoveringType>()),
+    type:                             Attribute(0x0000, TlvEnum<WindowCoveringType>(), { persistent: true }),
     physicalClosedLimitLift:          OptionalAttribute(0x0001, TlvUInt16),
     physicalClosedLimitTilt:          OptionalAttribute(0x0002, TlvUInt16),
     currentPositionLift:              OptionalAttribute(0x0003, TlvUInt16),
@@ -207,10 +219,12 @@ export const WindowCoveringCluster = Cluster({
     configStatus:                     Attribute(0x0007, TlvBitmap(TlvUInt8, WindowCoveringConfigStatus)),
     currentPositionLiftPercent:       OptionalAttribute(0x0008, WCPercent),
     currentPositionTiltPercent:       OptionalAttribute(0x0009, WCPercent),
-    operationalStatus:                Attribute(0x000a, TlvBitmap(TlvUInt8, WindowCoveringOperationalStatus)), // TODO
+    operationalStatus:                Attribute(0x000a, TlvEnum<WindowCoveringOperationalStatus>(), {
+      persistent:true,
+      default:WindowCoveringOperationalStatus.Stopped}),
     targetPositionLiftPercent100ths:  OptionalAttribute(0x000b, WCPercent100ths),
     targetPositionTiltPercent100ths:  OptionalAttribute(0x000c, WCPercent100ths),
-    endProductType:                   Attribute(0x000d, TlvEnum<WindowCoveringEndProductType>()),
+    endProductType:                   WritableAttribute(0x000d, TlvEnum<WindowCoveringEndProductType>(), {persistent:true}),
     currentPositionLiftPercent100ths: OptionalAttribute(0x000e, WCPercent100ths),
     currentPositionTiltPercent100ths: OptionalAttribute(0x000f, WCPercent100ths),
     installedOpenLimitLift:           OptionalAttribute(0x0010, TlvUInt16),
@@ -220,7 +234,7 @@ export const WindowCoveringCluster = Cluster({
     // velocityLift:                  Attribute(0x0014, TlvDeprecated),
     // accelerationTimeLift:          Attribute(0x000f, TlvDeprecated),
     // decelerationTimeLift:          Attribute(0x000f, TlvDeprecated),
-    mode:                             Attribute(0x0017, TlvBitmap(TlvUInt8, WindowCoveringMode)),
+    mode:                             Attribute(0x0017, TlvBitmap(TlvUInt8, WindowCoveringMode), {persistent:true}),
     // intermediateSetpointsLift:     Attribute(0x0018, TlvDeprecated),
     // intermediateSetpointsTilt:     Attribute(0x0019, TlvDeprecated),
     safetyStatus:                     OptionalAttribute(0x001a, TlvBitmap(TlvUInt16, WindowCoveringSafetyStatus))
@@ -231,15 +245,15 @@ export const WindowCoveringCluster = Cluster({
   /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.6 */
   commands: {
     /** Upon receipt of this command, the Window Covering will adjust its position so the physical lift/slide and tilt is at the maximum open/up position. */
-    open:             Command(0x00, TlvNoArguments, 0, TlvBoolean ),
+    open:             Command(0x00, TlvNoArguments, 0, TlvStatusResponse ),
     /** Upon receipt of this command, the Window Covering will adjust its position so the physical lift/slide and tilt is at the maximum closed/down position. */
-    close:            Command(0x01, TlvNoArguments, 1, TlvBoolean),
+    close:            Command(0x01, TlvNoArguments, 1, TlvStatusResponse),
     /** Upon receipt of this command, the Window Covering will stop any adjusting to the physical tilt and lift/slide that is currently occurring. */
-    stop:             Command(0x02, TlvNoArguments, 2, TlvBoolean),
+    stop:             Command(0x02, TlvNoArguments, 2, TlvStatusResponse),
 
-    gotoLiftValue:    OptionalCommand(0x04, GoToLiftValueParams,   4, TlvBoolean ),
-    gotoLiftPercent:  OptionalCommand(0x05, GotoLiftPercentParams, 5, TlvBoolean),
-    gotoTiltValue:    OptionalCommand(0x07, GotoTiltValueParams,   7, TlvBoolean),
-    gotoTiltPercent:  OptionalCommand(0x08, GotoTiltPercentParams, 8, TlvBoolean )
+    gotoLiftValue:    OptionalCommand(0x04, GoToLiftValueParams,   4, TlvStatusResponse ),
+    gotoLiftPercent:  OptionalCommand(0x05, GotoLiftPercentParams, 5, TlvStatusResponse),
+    gotoTiltValue:    OptionalCommand(0x07, GotoTiltValueParams,   7, TlvStatusResponse),
+    gotoTiltPercent:  OptionalCommand(0x08, GotoTiltPercentParams, 8, TlvStatusResponse )
   },
 });
