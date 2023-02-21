@@ -43,6 +43,10 @@
     "bn.js": "^5.2.0",
     "elliptic": "^6.5.4"
   },
+  "files": [
+    "build/**/*",
+    "src/**/*"
+  ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "bin": {
