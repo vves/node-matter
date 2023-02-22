@@ -26,15 +26,12 @@ import { DEVICE } from "./matter/common/DeviceTypes";
 import { MdnsBroadcaster } from "./matter/mdns/MdnsBroadcaster";
 import { Network } from "./net/Network";
 import { NetworkNode } from "./net/node/NetworkNode";
-import { commandExecutor } from "./util/CommandLine";
-import { OnOffCluster } from "./matter/cluster/OnOffCluster";
 import { GeneralCommissioningClusterHandler } from "./matter/cluster/server/GeneralCommissioningServer";
 import { OperationalCredentialsClusterHandler } from "./matter/cluster/server/OperationalCredentialsServer";
 import { MdnsScanner } from "./matter/mdns/MdnsScanner";
 import packageJson from "../package.json";
 import { Logger } from "./log/Logger";
 import { VendorId } from "./matter/common/VendorId";
-import { OnOffClusterHandler } from "./matter/cluster/server/OnOffServer";
 import { ByteArray } from "@project-chip/matter.js";
 import { CommissionningFlowType, DiscoveryCapabilitiesSchema, ManualPairingCodeCodec, QrPairingCodeCodec } from "./codec/PairingCode.js";
 import { QrCode } from "./codec/QrCode.js";
@@ -43,7 +40,6 @@ import { AdminCommissioningCluster, CommissioningWindowStatus } from "./matter/c
 import { AdminCommissioningHandler } from "./matter/cluster/server/AdminCommissioningServer";
 import { NetworkCommissioningHandler } from "./matter/cluster/server/NetworkCommissioningServer";
 import { FabricIndex } from "./matter/common/FabricIndex";
-import { Platform } from "./util/Platform";
 import { WindowCoveringCluster, WindowCoveringEndProductType, WindowCoveringOperationalStatus, WindowCoveringType } from "./matter/cluster/WindowCoveringCluster";
 import { ClusterServerHandlers } from "./matter/cluster/server/ClusterServer";
 
@@ -61,10 +57,10 @@ const CertificateDeclaration = ByteArray.fromHex("3082021906092a864886f70d010702
 
 Network.get = singleton(() => new NetworkNode());
 
-const logger = Logger.get("🚾");
+const logger = Logger.get("V🚾");
 const randomDiscriminator = Math.floor(Math.random() * (4096 - 2048 + 1)) + 2048;
 
-class Device {
+export class VirtualWCWifiDevice {
     async start(networkInterface: string | undefined = undefined) {
         logger.info(`wc-node-matter@${packageJson.version}`);
 
@@ -99,19 +95,19 @@ class Device {
                 return SuccessResponse
             },
 
-            /** All HomeKit requests are funneled here. */
+            /** All HomeKit requests are funneled here. HomeKit does not use open/close/stop */
             gotoLiftPercent: async ({ request, attributes, session }) => {
                 logger.warn(`GotoLiftPercent: request:${JSON.stringify(request)}`)
                 // THIS IS THE logic as defined by stupid Matter and HomePod uses Percent as Legacy Matter Value
-                const normalizedTargetLiftPercent = request.percent!=undefined?request.percent/100:request.percent100ths!/100
+                const normalizedTargetLiftPercent = request.percent != undefined ? request.percent / 100 : request.percent100ths! / 100
                 logger.debug(`GotoLiftPercent normalized Target ${normalizedTargetLiftPercent}`)
                 attributes.targetPositionLiftPercent100ths.set(normalizedTargetLiftPercent * 100)
                 setTimeout(() => {
-                    try{
+                    try {
                         attributes.currentPositionLiftPercent.set(normalizedTargetLiftPercent);
-                        attributes.currentPositionLiftPercent100ths.set(normalizedTargetLiftPercent*100);
+                        attributes.currentPositionLiftPercent100ths.set(normalizedTargetLiftPercent * 100);
                         attributes.operationalStatus.set(WindowCoveringOperationalStatus.Stopped);
-                    }catch(err){
+                    } catch (err) {
                         logger.error(`unable to set values ${err}`)
                     }
                     // (attributes as any).
@@ -270,4 +266,4 @@ class Device {
     }
 }
 
-new Device().start('en0')
+new VirtualWCWifiDevice().start('en0')
