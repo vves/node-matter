@@ -61,92 +61,102 @@ const CertificateDeclaration = ByteArray.fromHex("3082021906092a864886f70d010702
 
 Network.get = singleton(() => new NetworkNode());
 
-const logger = Logger.get("Device");
+const logger = Logger.get("🚾");
+const randomDiscriminator = Math.floor(Math.random() * (4096 - 2048 + 1)) + 2048;
 
 class Device {
-    async start(networkInterface : string|undefined = undefined) {
-        logger.info(`node-matter@${packageJson.version}`);
+    async start(networkInterface: string | undefined = undefined) {
+        logger.info(`wc-node-matter@${packageJson.version}`);
 
         const deviceName = `Virtual Window Covering`;
         const deviceType = 0x0102 /* Window Covering */;
-        const vendorName = "node-matter-vves";
-        const passcode = 20202021;
-        const discriminator = 3840;
+        const vendorName = "wc-node-matter";
+        const passcode = 42424242;
+        const discriminator = randomDiscriminator;
         // product name / id and vendor id should match what is in the device certificate
         const vendorId = new VendorId(0xFFF1);
         const productName = "Matter Test DAC 0007";
         const productId = 0X8000;
 
-        // Barebone implementation of the On/Off cluster
-        // const onOffClusterServer = new ClusterServer(
-        //     OnOffCluster,
-        //     { lightingLevelControl: false },
-        //     { onOff: false }, // Off by default
-        //     OnOffClusterHandler()
-        // );
-
-        // // We listen to the attribute update to trigger an action. This could also have been done in the method invokations in the server.
-        // onOffClusterServer.attributes.onOff.addListener(on => commandExecutor(on ? "on" : "off")?.());
-
-        // wcClusterServer.attributes.
-
         // TODO Status Codes?  Core Spec 8.10
-      const SuccessResponse =  {status: 0, interactionModelRevision:1}
+        const SuccessResponse = { status: 0, interactionModelRevision: 1 }
 
-      const WCClusterHandler: () => ClusterServerHandlers<typeof WindowCoveringCluster> = () => ({
-        open: async ({attributes}) => {
-          logger.warn(`Open WC TODO ${attributes}`);
-          return SuccessResponse
-        },
+        const WCClusterHandler: () => ClusterServerHandlers<typeof WindowCoveringCluster> = () => ({
+            open: async ({ request, attributes, session }) => {
+                logger.warn(`Open: \n\trequest:${JSON.stringify(request)}`)
+                return SuccessResponse
+            },
 
-        close: async ({attributes }) => {
-          logger.warn(`Close WC TODO ${attributes}`)
-          return SuccessResponse
-        },
+            close: async ({ request, attributes, session }) => {
+                logger.warn(`CLOSE: \n\trequest:${JSON.stringify(request)}`)
+                attributes
+                return SuccessResponse
+            },
 
-        stop:  async ({ attributes}) => {
-          logger.warn(`Stop WC TODO ${attributes}`)
-          return SuccessResponse
-        },
+            stop: async ({ request, attributes, session }) => {
+                logger.warn(`STOP: \n\trequest:${JSON.stringify(request)}`)
+                logger.warn(`Stop WC TODO ${attributes}`)
+                return SuccessResponse
+            },
 
-        gotoLiftPercent: async ({ request, attributes, session }) => {
-          logger.warn(`GotoLiftPercent: \n\trequest:${JSON.stringify(request)} \ntattribs: ${JSON.stringify(attributes)}`)
-          return SuccessResponse
-        }
-      });
+            /** All HomeKit requests are funneled here. */
+            gotoLiftPercent: async ({ request, attributes, session }) => {
+                logger.warn(`GotoLiftPercent: request:${JSON.stringify(request)}`)
+                // THIS IS THE logic as defined by stupid Matter and HomePod uses Percent as Legacy Matter Value
+                const normalizedTargetLiftPercent = request.percent!=undefined?request.percent/100:request.percent100ths!/100
+                logger.debug(`GotoLiftPercent normalized Target ${normalizedTargetLiftPercent}`)
+                attributes.targetPositionLiftPercent100ths.set(normalizedTargetLiftPercent * 100)
+                setTimeout(() => {
+                    try{
+                        attributes.currentPositionLiftPercent.set(normalizedTargetLiftPercent);
+                        attributes.currentPositionLiftPercent100ths.set(normalizedTargetLiftPercent*100);
+                        attributes.operationalStatus.set(WindowCoveringOperationalStatus.Stopped);
+                    }catch(err){
+                        logger.error(`unable to set values ${err}`)
+                    }
+                    // (attributes as any).
+                }, 5000)
+                return SuccessResponse
+            }
+        });
 
-      const wcClusterServer = new ClusterServer(WindowCoveringCluster,
-          /* features */ {
-          lift: true,
-          positionAwareLift: true,
-          tilt: false,
-          positionAwareTilt: false,
-          absolutePosition: false
-        },
-          /* attributeInitialValues*/ {
-          type: WindowCoveringType.RollerShade,
-          endProductType: WindowCoveringEndProductType.BalloonShade,
-          currentPositionLiftPercent: 88,
-          currentPositionLiftPercent100ths:8800,
-          configStatus: {
-            operational: true,
-            reversed: false,
-            liftPositionAware: true,
-            liftPositionType: true,   // encoder, not time
-            tiltPositionAware: false,
-            tiltPositionType: true    // encoder, not time
-          },
-          mode: {
-            calibrateMode: false,
-            ledFeedback: false,
-            maintenanceMode: false,
-            reversed: false
-          },
-          operationalStatus: WindowCoveringOperationalStatus.Stopped
-        },
-        /* handlers */
-        WCClusterHandler()
-      )
+
+        const wcClusterServer = new ClusterServer(WindowCoveringCluster,
+            /* features */
+            {
+                lift: true,
+                positionAwareLift: true,
+                tilt: false,
+                positionAwareTilt: false,
+                absolutePosition: false
+            },
+            /* attributeInitialValues*/
+            {
+                type: WindowCoveringType.RollerShade,
+                endProductType: WindowCoveringEndProductType.InteriorBlind,
+                currentPositionLiftPercent: 0,
+                currentPositionLiftPercent100ths: 0,
+                targetPositionLiftPercent100ths: 0,
+                targetPositionTiltPercent100ths: 0,
+                configStatus: {
+                    operational: true,
+                    reversed: false,
+                    liftPositionAware: true,
+                    liftPositionType: true,   // encoder, not time
+                    tiltPositionAware: false,
+                    tiltPositionType: true    // encoder, not time
+                },
+                mode: {
+                    reversed: false,
+                    calibrateMode: false,
+                    maintenanceMode: false,
+                    ledFeedback: false
+                },
+                operationalStatus: WindowCoveringOperationalStatus.Stopped
+            },
+            /* handlers */
+            WCClusterHandler()
+        )
 
         const secureChannelProtocol = new SecureChannelProtocol(
             await PaseServer.fromPin(passcode, { iterations: 1000, salt: Crypto.getRandomData(32) }),
@@ -160,52 +170,52 @@ class Device {
             .addBroadcaster(await MdnsBroadcaster.create(networkInterface))
             .addProtocolHandler(secureChannelProtocol)
             .addProtocolHandler(new InteractionServer()
-               .addEndpoint(0x00, DEVICE.ROOT, [
-                   new ClusterServer(BasicInformationCluster, {}, {
-                       dataModelRevision: 1,
-                       vendorName,
-                       vendorId,
-                       productName,
-                       productId,
-                       nodeLabel: "",
-                       hardwareVersion: 0,
-                       hardwareVersionString: "0",
-                       location: "US",
-                       localConfigDisabled: false,
-                       softwareVersion: 1,
-                       softwareVersionString: "v1",
-                       capabilityMinima: {
-                           caseSessionsPerFabric: 3,
-                           subscriptionsPerFabric: 3,
-                       },
-                       serialNumber: `node-matter-${packageJson.version}`,
-                   }, {}),
-                   new ClusterServer(GeneralCommissioningCluster, {}, {
-                       breadcrumb: BigInt(0),
-                       commissioningInfo: {
-                           failSafeExpiryLengthSeconds: 60 /* 1min */,
-                           maxCumulativeFailsafeSeconds: 900 /* Recommended according to Specs */,
-                       },
-                       regulatoryConfig: RegulatoryLocationType.Indoor,
-                       locationCapability: RegulatoryLocationType.IndoorOutdoor,
-                       supportsConcurrentConnections: true,
-                   }, GeneralCommissioningClusterHandler),
-                   new ClusterServer(OperationalCredentialsCluster, {}, {
-                           nocs: [],
-                           fabrics: [],
-                           supportedFabrics: 254,
-                           commissionedFabrics: 0,
-                           trustedRootCertificates: [],
-                           currentFabricIndex: FabricIndex.NO_FABRIC,
-                       },
-                       OperationalCredentialsClusterHandler({
-                           devicePrivateKey: DevicePrivateKey,
-                           deviceCertificate: DeviceCertificate,
-                           deviceIntermediateCertificate: ProductIntermediateCertificate,
-                           certificateDeclaration: CertificateDeclaration,
-                       }),
-                   ),
-                   new ClusterServer(NetworkCommissioningCluster,
+                .addEndpoint(0x00, DEVICE.ROOT, [
+                    new ClusterServer(BasicInformationCluster, {}, {
+                        dataModelRevision: 1,
+                        vendorName,
+                        vendorId,
+                        productName,
+                        productId,
+                        nodeLabel: "",
+                        hardwareVersion: 0,
+                        hardwareVersionString: "Gen3",
+                        location: "US",
+                        localConfigDisabled: false,
+                        softwareVersion: 1,
+                        softwareVersionString: "v309",
+                        capabilityMinima: {
+                            caseSessionsPerFabric: 3,
+                            subscriptionsPerFabric: 3,
+                        },
+                        serialNumber: `wc-${randomDiscriminator}-${packageJson.version}`,
+                    }, {}),
+                    new ClusterServer(GeneralCommissioningCluster, {}, {
+                        breadcrumb: BigInt(0),
+                        commissioningInfo: {
+                            failSafeExpiryLengthSeconds: 60 /* 1min */,
+                            maxCumulativeFailsafeSeconds: 900 /* Recommended according to Specs */,
+                        },
+                        regulatoryConfig: RegulatoryLocationType.Indoor,
+                        locationCapability: RegulatoryLocationType.IndoorOutdoor,
+                        supportsConcurrentConnections: true,
+                    }, GeneralCommissioningClusterHandler),
+                    new ClusterServer(OperationalCredentialsCluster, {}, {
+                        nocs: [],
+                        fabrics: [],
+                        supportedFabrics: 254,
+                        commissionedFabrics: 0,
+                        trustedRootCertificates: [],
+                        currentFabricIndex: FabricIndex.NO_FABRIC,
+                    },
+                        OperationalCredentialsClusterHandler({
+                            devicePrivateKey: DevicePrivateKey,
+                            deviceCertificate: DeviceCertificate,
+                            deviceIntermediateCertificate: ProductIntermediateCertificate,
+                            certificateDeclaration: CertificateDeclaration,
+                        }),
+                    ),
+                    new ClusterServer(NetworkCommissioningCluster,
                         {
                             wifi: false,
                             thread: false,
@@ -235,7 +245,7 @@ class Device {
                         AdminCommissioningHandler(secureChannelProtocol),
                     )
                 ])
-                .addEndpoint(0x01, DEVICE.WINDOW_COVERING, [ wcClusterServer ])
+                .addEndpoint(0x01, DEVICE.WINDOW_COVERING, [wcClusterServer])
             )
             .start()
 
@@ -260,11 +270,4 @@ class Device {
     }
 }
 
-
-const demo = async () => {
-    const cli = new Platform()
-    const selectedInterface = await cli.selectInterface()
-    new Device().start(selectedInterface);
-}
-
-demo()
+new Device().start('en0')
