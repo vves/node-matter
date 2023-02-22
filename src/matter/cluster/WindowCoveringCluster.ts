@@ -1,11 +1,11 @@
-import { BitFlag, TlvBitmap, TlvBoolean, TlvEnum, TlvField, TlvInt16, TlvObject, TlvUInt16, TlvUInt8, TlvWrapper } from "@project-chip/matter.js";
+import { BitFlag, TlvBitmap, TlvBoolean, TlvEnum, TlvField, TlvInt16, TlvObject, TlvOptionalField, TlvUInt16, TlvUInt8, TlvWrapper } from "@project-chip/matter.js";
 import { TlvStatusResponse } from "../interaction/InteractionMessages";
 import { Attribute, Cluster, Command, OptionalAttribute, OptionalCommand, TlvNoArguments, TlvNoResponse, WritableAttribute } from "./Cluster";
 
 /** alias for percentages expressed as 0 to 100 */
 const WCPercent = TlvUInt16.bound({min: 0, max: 100})
 
-/** alias for percentages expressed as 0 to 100 */
+/** alias for percentages expressed as 0 to 100.00 with 2 decimals */
 const WCPercent100ths = TlvUInt16.bound({min: 0, max: 10000})
 
 
@@ -173,10 +173,20 @@ const GoToLiftValueParams = TlvObject({
   value: TlvField(0, TlvUInt16)
 });
 
-/** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.6.5 */
+/** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.6.5
+ - If the command includes LiftPercent100thsValue, then TargetPositionLiftPercent100ths attribute SHALL be set to LiftPercent100thsValue.
+     Otherwise the TargetPositionLiftPercent100ths attribute SHALL be set to LiftPercentageValue * 100.
+ - If a client includes LiftPercent100thsValue in the command, the LiftPercentageValue SHALL be set to to LiftPercent100thsValue / 100,
+    so a legacy server which only supports LiftPercentageValue (not LiftPercent100thsValue) has a value to set the target position.
+- If the server does not support the Position Aware feature, then a zero percentage SHALL be treated as a
+    UpOrOpen command and a non-zero percentage SHALL be treated as an DownOrClose com­mand.
+    If the device is only a tilt control device, then the command SHOULD be ignored and a UNSUPPORTED_COMMAND status SHOULD be returned.
+*/
 const GotoLiftPercentParams = TlvObject({
-  percent: TlvField(0, WCPercent100ths),
-  percent100ths: TlvField(1, WCPercent100ths)
+  /** Legacy Matter - still used by HomePod 16.3.2*/
+  percent: TlvOptionalField(0, WCPercent100ths), // TODO - clarify if this is correct and needs to be handled in WC Server
+  /** PREFERRED  */
+  percent100ths: TlvOptionalField(1, WCPercent100ths)
 });
 
 /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.6.6 */
@@ -217,15 +227,15 @@ export const WindowCoveringCluster = Cluster({
     numOfActuationsLift:              OptionalAttribute(0x0005, TlvUInt16),
     numOfActuationsTilt:              OptionalAttribute(0x0006, TlvUInt16),
     configStatus:                     Attribute(0x0007, TlvBitmap(TlvUInt8, WindowCoveringConfigStatus)),
-    currentPositionLiftPercent:       OptionalAttribute(0x0008, WCPercent),
+    currentPositionLiftPercent:       Attribute(0x0008, WCPercent),
     currentPositionTiltPercent:       OptionalAttribute(0x0009, WCPercent),
     operationalStatus:                Attribute(0x000a, TlvEnum<WindowCoveringOperationalStatus>(), {
       persistent:true,
       default:WindowCoveringOperationalStatus.Stopped}),
-    targetPositionLiftPercent100ths:  OptionalAttribute(0x000b, WCPercent100ths),
-    targetPositionTiltPercent100ths:  OptionalAttribute(0x000c, WCPercent100ths),
+    targetPositionLiftPercent100ths:  Attribute(0x000b, WCPercent100ths),
+    targetPositionTiltPercent100ths:  Attribute(0x000c, WCPercent100ths),
     endProductType:                   WritableAttribute(0x000d, TlvEnum<WindowCoveringEndProductType>(), {persistent:true}),
-    currentPositionLiftPercent100ths: OptionalAttribute(0x000e, WCPercent100ths),
+    currentPositionLiftPercent100ths: Attribute(0x000e, WCPercent100ths),
     currentPositionTiltPercent100ths: OptionalAttribute(0x000f, WCPercent100ths),
     installedOpenLimitLift:           OptionalAttribute(0x0010, TlvUInt16),
     installedClosedLimitLift:         OptionalAttribute(0x0011, TlvUInt16),
