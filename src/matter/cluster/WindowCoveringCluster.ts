@@ -217,6 +217,8 @@ export const WindowCoveringCluster = Cluster({
   /** At least ONE of the Lift and Tilt features SHALL be supported */
   features: WindowCoveringFeatures,
 
+  /** NOTE: Unlike the most popular shading systems, ALL INTERNAL Percentages are percent OPEN, NOT percent light transmission */
+
   /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.5 */
   attributes: {
     type:                             Attribute(0x0000, TlvEnum<WindowCoveringType>(), { persistent: true }),
