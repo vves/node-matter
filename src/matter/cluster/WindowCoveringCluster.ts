@@ -230,7 +230,7 @@ export const WindowCoveringCluster = Cluster({
     numOfActuationsTilt:              OptionalAttribute(0x0006, TlvUInt16),
     configStatus:                     Attribute(0x0007, TlvBitmap(TlvUInt8, WindowCoveringConfigStatus)),
     currentPositionLiftPercent:       Attribute(0x0008, WCPercent),
-    currentPositionTiltPercent:       OptionalAttribute(0x0009, WCPercent),
+    currentPositionTiltPercent:       Attribute(0x0009, WCPercent),
     operationalStatus:                Attribute(0x000a, TlvEnum<WindowCoveringOperationalStatus>(), {
       persistent:true,
       default:WindowCoveringOperationalStatus.Stopped}),
@@ -238,7 +238,7 @@ export const WindowCoveringCluster = Cluster({
     targetPositionTiltPercent100ths:  Attribute(0x000c, WCPercent100ths),
     endProductType:                   WritableAttribute(0x000d, TlvEnum<WindowCoveringEndProductType>(), {persistent:true}),
     currentPositionLiftPercent100ths: Attribute(0x000e, WCPercent100ths),
-    currentPositionTiltPercent100ths: OptionalAttribute(0x000f, WCPercent100ths),
+    currentPositionTiltPercent100ths: Attribute(0x000f, WCPercent100ths),
     installedOpenLimitLift:           OptionalAttribute(0x0010, TlvUInt16),
     installedClosedLimitLift:         OptionalAttribute(0x0011, TlvUInt16),
     installedOpenLimitTilt:           OptionalAttribute(0x0012, TlvUInt16),

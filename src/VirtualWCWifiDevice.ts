@@ -64,6 +64,8 @@ export class VirtualWCWifiDevice {
     async start(networkInterface: string | undefined = undefined) {
         logger.info(`wc-node-matter@${packageJson.version}`);
 
+        const tiltable = true
+
         const deviceName = `Virtual Window Covering`;
         const deviceType = 0x0102 /* Window Covering */;
         const vendorName = "wc-node-matter";
@@ -113,6 +115,24 @@ export class VirtualWCWifiDevice {
                     // (attributes as any).
                 }, 5000)
                 return SuccessResponse
+            },
+
+            gotoTiltPercent: async({ request, attributes, session }) => {
+                logger.warn(`GotoTiltPercent: request:${JSON.stringify(request)}`)
+                const normalizedTargetPercent = request.percent != undefined ? request.percent / 100 : request.percent100ths! / 100
+                logger.debug(`GotoLiftPercent normalized Target ${normalizedTargetPercent}`)
+                attributes.targetPositionTiltPercent100ths.set(normalizedTargetPercent * 100)
+                setTimeout(() => {
+                    try {
+                        attributes.currentPositionTiltPercent.set(normalizedTargetPercent);
+                        attributes.currentPositionTiltPercent100ths.set(normalizedTargetPercent * 100);
+                        attributes.operationalStatus.set(WindowCoveringOperationalStatus.Stopped);
+                    } catch (err) {
+                        logger.error(`unable to set values ${err}`)
+                    }
+                    // (attributes as any).
+                }, 5000)
+                return SuccessResponse
             }
         });
 
@@ -122,16 +142,18 @@ export class VirtualWCWifiDevice {
             {
                 lift: true,
                 positionAwareLift: true,
-                tilt: false,
-                positionAwareTilt: false,
+                tilt: tiltable,
+                positionAwareTilt: tiltable,
                 absolutePosition: false
             },
             /* attributeInitialValues*/
             {
                 type: WindowCoveringType.RollerShade,
-                endProductType: WindowCoveringEndProductType.InteriorBlind,
+                endProductType: WindowCoveringEndProductType.Unknown,
                 currentPositionLiftPercent: 0,
                 currentPositionLiftPercent100ths: 0,
+                currentPositionTiltPercent: 0,
+                currentPositionTiltPercent100ths: 0,
                 targetPositionLiftPercent100ths: 0,
                 targetPositionTiltPercent100ths: 0,
                 configStatus: {
@@ -139,7 +161,7 @@ export class VirtualWCWifiDevice {
                     reversed: false,
                     liftPositionAware: true,
                     liftPositionType: true,   // encoder, not time
-                    tiltPositionAware: false,
+                    tiltPositionAware: tiltable,
                     tiltPositionType: true    // encoder, not time
                 },
                 mode: {
