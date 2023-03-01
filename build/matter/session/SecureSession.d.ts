@@ -1,0 +1,48 @@
+import { Message, Packet } from "../../codec/MessageCodec";
+import { Fabric } from "../fabric/Fabric";
+import { SubscriptionHandler } from "../interaction/SubscriptionHandler";
+import { Session } from "./Session";
+import { NodeId } from "../common/NodeId";
+import { ByteArray } from "@project-chip/matter.js";
+export declare class SecureSession<T> implements Session<T> {
+    private readonly context;
+    private readonly id;
+    private readonly fabric;
+    private readonly peerNodeId;
+    private readonly peerSessionId;
+    private readonly sharedSecret;
+    private readonly decryptKey;
+    private readonly encryptKey;
+    private readonly attestationKey;
+    private readonly idleRetransmissionTimeoutMs;
+    private readonly activeRetransmissionTimeoutMs;
+    private readonly retransmissionRetries;
+    private nextSubscriptionId;
+    private readonly subscriptions;
+    private timestamp;
+    private activeTimestamp;
+    static create<T>(context: T, id: number, fabric: Fabric | undefined, peerNodeId: NodeId, peerSessionId: number, sharedSecret: ByteArray, salt: ByteArray, isInitiator: boolean, isResumption: boolean, idleRetransTimeoutMs?: number, activeRetransTimeoutMs?: number): Promise<SecureSession<T>>;
+    constructor(context: T, id: number, fabric: Fabric | undefined, peerNodeId: NodeId, peerSessionId: number, sharedSecret: ByteArray, decryptKey: ByteArray, encryptKey: ByteArray, attestationKey: ByteArray, idleRetransmissionTimeoutMs?: number, activeRetransmissionTimeoutMs?: number, retransmissionRetries?: number);
+    isSecure(): boolean;
+    notifyActivity(messageReceived: boolean): void;
+    isPeerActive(): boolean;
+    decode({ header, bytes }: Packet): Message;
+    encode(message: Message): Packet;
+    getAttestationChallengeKey(): ByteArray;
+    getFabric(): Fabric | undefined;
+    getName(): string;
+    getMrpParameters(): {
+        idleRetransmissionTimeoutMs: number;
+        activeRetransmissionTimeoutMs: number;
+        retransmissionRetries: number;
+    };
+    getContext(): T;
+    getId(): number;
+    getPeerSessionId(): number;
+    getNodeId(): NodeId;
+    getPeerNodeId(): NodeId;
+    addSubscription(subscription: SubscriptionHandler): void;
+    destroy(): void;
+    clearSubscriptions(): void;
+    private generateNonce;
+}

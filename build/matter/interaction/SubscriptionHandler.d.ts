@@ -1,0 +1,31 @@
+import { MatterDevice } from "../MatterDevice";
+import { InteractionServerMessenger } from "./InteractionMessenger";
+import { Fabric } from "../fabric/Fabric";
+import { AttributeWithPath, AttributePath } from "./InteractionServer";
+import { NodeId } from "../common/NodeId";
+import { TlvSchema } from "@project-chip/matter.js";
+import { SecureSession } from "../session/SecureSession";
+export declare class SubscriptionHandler {
+    readonly subscriptionId: number;
+    private readonly server;
+    private readonly fabric;
+    private readonly peerNodeId;
+    private readonly attributes;
+    private lastUpdateTimeMs;
+    private updateTimer;
+    private outstandingAttributeUpdates;
+    private attributeListeners;
+    private sendUpdatesActivated;
+    private readonly maxInterval;
+    private readonly sendInterval;
+    private readonly minIntervalFloorMs;
+    private readonly maxIntervalCeilingMs;
+    constructor(subscriptionId: number, server: MatterDevice, fabric: Fabric, peerNodeId: NodeId, attributes: AttributeWithPath[], minIntervalFloor: number, maxIntervalCeiling: number);
+    getMaxInterval(): number;
+    activateSendingUpdates(): void;
+    sendUpdate(): Promise<void>;
+    sendInitialReport(messenger: InteractionServerMessenger, session: SecureSession<MatterDevice>): Promise<void>;
+    attributeChangeListener(path: AttributePath, schema: TlvSchema<any>, version: number, value: any): Promise<void>;
+    cancel(): void;
+    private sendUpdateMessage;
+}

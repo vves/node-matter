@@ -1,0 +1,37 @@
+import { Message } from "../../codec/MessageCodec";
+import { Session } from "../session/Session";
+import { MessageChannel, MessageCounter } from "./ExchangeManager";
+import { NodeId } from "./NodeId";
+import { ByteArray } from "@project-chip/matter.js";
+export declare class MessageExchange<ContextT> {
+    readonly session: Session<ContextT>;
+    readonly channel: MessageChannel<ContextT>;
+    private readonly messageCounter;
+    private readonly isInitiator;
+    private readonly peerSessionId;
+    private readonly nodeId;
+    private readonly peerNodeId;
+    private readonly exchangeId;
+    private readonly protocolId;
+    private readonly closeCallback;
+    static fromInitialMessage<ContextT>(channel: MessageChannel<ContextT>, messageCounter: MessageCounter, initialMessage: Message, closeCallback: () => void): MessageExchange<ContextT>;
+    static initiate<ContextT>(channel: MessageChannel<ContextT>, exchangeId: number, protocolId: number, messageCounter: MessageCounter, closeCallback: () => void): MessageExchange<ContextT>;
+    private readonly activeRetransmissionTimeoutMs;
+    private readonly idleRetransmissionTimeoutMs;
+    private readonly retransmissionRetries;
+    private readonly messagesQueue;
+    private receivedMessageToAck;
+    private sentMessageToAck;
+    private sentMessageAckSuccess;
+    private sentMessageAckFailure;
+    private retransmissionTimer;
+    constructor(session: Session<ContextT>, channel: MessageChannel<ContextT>, messageCounter: MessageCounter, isInitiator: boolean, peerSessionId: number, nodeId: NodeId | undefined, peerNodeId: NodeId | undefined, exchangeId: number, protocolId: number, closeCallback: () => void);
+    onMessageReceived(message: Message): Promise<void>;
+    send(messageType: number, payload: ByteArray): Promise<void>;
+    nextMessage(): Promise<Message>;
+    waitFor(messageType: number): Promise<Message>;
+    private getResubmissionBackOffTime;
+    private retransmitMessage;
+    close(): void;
+    private closeInternal;
+}

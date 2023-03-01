@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getDeviceMatterQname = exports.getFabricQname = exports.MATTER_SERVICE_QNAME = exports.MATTER_COMMISSION_SERVICE_QNAME = exports.SERVICE_DISCOVERY_QNAME = void 0;
+exports.SERVICE_DISCOVERY_QNAME = "_services._dns-sd._udp.local";
+exports.MATTER_COMMISSION_SERVICE_QNAME = "_matterc._udp.local";
+exports.MATTER_SERVICE_QNAME = "_matter._tcp.local";
+const getFabricQname = (operationalIdString) => `_I${operationalIdString}._sub.${exports.MATTER_SERVICE_QNAME}`;
+exports.getFabricQname = getFabricQname;
+const getDeviceMatterQname = (operationalIdString, nodeIdString) => `${operationalIdString}-${nodeIdString}.${exports.MATTER_SERVICE_QNAME}`;
+exports.getDeviceMatterQname = getDeviceMatterQname;
