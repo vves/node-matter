@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WindowCoveringCluster = exports.WindowCoveringSafetyStatus = exports.WindowCoveringMode = exports.WindowCoveringOperationalStatus = exports.WindowCoveringConfigStatus = exports.WindowCoveringEndProductType = exports.WindowCoveringType = void 0;
+exports.WindowCoveringCluster = exports.WindowCoveringSafetyStatus = exports.WindowCoveringMode = exports.WindowCoveringOperationalStatus = exports.WindowCoveringConfigStatus = exports.WindowCoveringEndProductType = exports.WindowCoveringType = exports.WindowCoveringFeatures = void 0;
 const matter_js_1 = require("@project-chip/matter.js");
 const InteractionMessages_1 = require("../interaction/InteractionMessages");
 const Cluster_1 = require("./Cluster");
 const WCPercent = matter_js_1.TlvUInt16.bound({ min: 0, max: 100 });
 const WCPercent100ths = matter_js_1.TlvUInt16.bound({ min: 0, max: 10000 });
-const WindowCoveringFeatures = {
+exports.WindowCoveringFeatures = {
     lift: (0, matter_js_1.BitFlag)(0),
     tilt: (0, matter_js_1.BitFlag)(1),
     positionAwareLift: (0, matter_js_1.BitFlag)(2),
@@ -103,7 +103,7 @@ exports.WindowCoveringCluster = (0, Cluster_1.Cluster)({
     id: 0x102,
     name: "Window Covering",
     revision: 5,
-    features: WindowCoveringFeatures,
+    features: exports.WindowCoveringFeatures,
     attributes: {
         type: (0, Cluster_1.Attribute)(0x0000, (0, matter_js_1.TlvEnum)(), { persistent: true }),
         physicalClosedLimitLift: (0, Cluster_1.OptionalAttribute)(0x0001, matter_js_1.TlvUInt16),

@@ -1,5 +1,12 @@
 import { BitFlag } from "@project-chip/matter.js";
 import { Attribute, Cluster, Command, OptionalAttribute, OptionalCommand, WritableAttribute } from "./Cluster";
+export declare const WindowCoveringFeatures: {
+    lift: BitFlag;
+    tilt: BitFlag;
+    positionAwareLift: BitFlag;
+    absolutePosition: BitFlag;
+    positionAwareTilt: BitFlag;
+};
 export declare enum WindowCoveringType {
     RollerShade = 0,
     RollerShade2Motor = 1,
