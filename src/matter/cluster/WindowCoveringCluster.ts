@@ -10,7 +10,7 @@ const WCPercent100ths = TlvUInt16.bound({min: 0, max: 10000})
 
 
 /** @see {@link MatterApplicationClusterSpecificationV1_0} § 5.3.4 */
-const WindowCoveringFeatures = {
+export const WindowCoveringFeatures = {
   /** The Lift feature applies to window coverings that lift up and down (ex: for a rollershade, Up and Down is Lift Open and Close) or slide left to right (ex: for a sliding curtain, Left and Right is Lift Open and Close). */
   lift: BitFlag(0),
   /** The Tilt feature applies to window coverings with vertical or horizontal strips. */
